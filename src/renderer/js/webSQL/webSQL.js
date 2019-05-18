@@ -16,6 +16,8 @@ let webconnect = function () {
       conn.end()
     }
   )
+  let setEvent = new Event('updateTaskMsg')
+  window.dispatchEvent(setEvent)
 }
 export default {
   webconnect
