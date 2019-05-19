@@ -78,6 +78,7 @@
 
 <script>
   import webSQL from '@/js/webSQL/webSQL'
+  import util from '@/js/util'
   export default {
     name: 'electronui',
     components: {
@@ -138,10 +139,44 @@
         var tempData = []
         this.tableData = []
         var self = this
+        var curDate = new Date()
+        var monthDate
+        console.log(curDate)
         let callback = function () {
           for (let index in tempData) {
             var cellData = tempData[index]
-            self.tableData.push(cellData)
+            var isadd = true
+            if (self.completeType) {
+              switch (self.completeType) {
+                case 0:
+                  break
+                case 1:
+                  if (cellData.status === 'DONE') {
+                    isadd = false
+                  }
+                  break
+                case 2:
+                  monthDate = new Date(cellData.lastDateTime)
+                  isadd = false
+                  if (cellData.status === 'DONE' && monthDate.getFullYear() === curDate.getFullYear() && monthDate.getMonth() === curDate.getMonth()) {
+                    isadd = true
+                  }
+                  break
+                case 3:
+                  isadd = false
+                  monthDate = new Date(cellData.lastDateTime)
+                  if (cellData.status === 'DONE' && monthDate.getFullYear() === curDate.getFullYear() && monthDate.getMonth() === (curDate.getMonth() - 1)) {
+                    isadd = true
+                  }
+                  break
+                default:
+                  break
+              }
+            }
+            if (isadd) {
+              cellData.lastDateTime = util.formatDate(cellData.lastDateTime)
+              self.tableData.push(cellData)
+            }
           }
         }
         if (this.versionType && this.versionType !== 0) {
