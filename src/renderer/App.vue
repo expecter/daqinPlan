@@ -51,7 +51,8 @@
           :data="tableData"
           style="width: 100%"
           height = "380px"
-          :default-sort = "{prop: 'start', order: 'descending'}"
+          border
+          :default-sort = "{prop: 'lastDateTime', order: 'descending'}"
           >
           <el-table-column
             prop="title"
@@ -66,6 +67,7 @@
           <el-table-column
             prop="lastDateTime"
             label="时间"
+            sortable
             width="180">
           </el-table-column>
         </el-table>
@@ -174,7 +176,7 @@
               }
             }
             if (isadd) {
-              cellData.lastDateTime = util.formatDate(cellData.lastDateTime)
+              cellData.lastDateTime = util.formatDate(cellData.lastDateTime, 'yyyy-MM-dd')
               self.tableData.push(cellData)
             }
           }
