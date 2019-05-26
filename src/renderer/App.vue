@@ -11,7 +11,17 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="人员名称">
+        <el-form-item label="职位">
+          <el-select v-model="roleType" placeholder="请选择">
+            <el-option
+              v-for="item in tlRoles"
+              :key="item.roleId"
+              :label="item.name"
+              :value="item.roleId">
+            </el-option>
+          </el-select> 
+        </el-form-item>
+        <!-- <el-form-item label="人员名称">
           <el-select v-model="memberType" placeholder="请选择">
             <el-option
               v-for="item in tlMember"
@@ -20,7 +30,7 @@
               :value="item.uid">
             </el-option>
           </el-select> 
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item label="版本名称">
           <el-select v-model="versionType" placeholder="请选择">
             <el-option
@@ -46,7 +56,7 @@
           <el-radio v-model="radio" label="2">bugs</el-radio>
         </el-form-item>
       </el-form>
-      <el-container>
+      <!-- <el-container>
         <el-table
           :data="tableData"
           style="width: 100%"
@@ -71,8 +81,35 @@
             width="180">
           </el-table-column>
         </el-table>
+      </el-container> -->
+      <el-container>
+        <el-table
+          :data="tlMember"
+          style="width: 100%"
+          height = "380px"
+          border
+          >
+          <el-table-column
+            prop="nickname"
+            label="人员"
+            width="380">
+          </el-table-column>
+          <el-table-column
+            prop="uid"
+            label="任务数"
+            width="380">
+          </el-table-column>
+          <el-table-column
+            fixed="right"
+            label="操作"
+            width="100">
+          <template slot-scope="scope">
+            <el-button @click="handleClick(scope.row)" type="text" size="small">查看</el-button>
+          </template>
+           </el-table-column>
+        </el-table>
       </el-container>
-      
+      <filterView :showDialog = showDialog :tableData=tableData></filterView>
       
     </div>
   
@@ -81,28 +118,31 @@
 <script>
   import webSQL from '@/js/webSQL/webSQL'
   import util from '@/js/util'
+  import filterView from '@/components/filterView'
   export default {
     name: 'electronui',
     components: {
+      filterView
     },
     data () {
       return {
         projectType: null,
         memberType: null,
         versionType: null,
+        roleType: null,
         radio: '1',
         tlProject: [],
         tlMember: [],
+        tlRoles: [],
         tlVersion: [],
         tableData: [],
         tempData: [],
+        showDialog: 0,
         completeType: null,
         tlCompleteTime: [{type: 0, label: '所有'}, {type: 1, label: '今日任务'}, {type: 2, label: '本月任务'}, {type: 3, label: '上月任务'}]
       }
     },
     created: function () {
-      console.log(webSQL)
-      console.log(this.projectType)
       let self = this
       window.addEventListener('updateTaskMsg', function (e) {
         self.updateTaskList()
@@ -110,31 +150,52 @@
       window.addEventListener('updateProjectMember', function (e) {
         self.updateTaskList()
       })
-      webSQL.getAllUsers(this.tlMember)
+      // webSQL.getAllUsers()
       webSQL.getProjects(this.tlProject)
-      webSQL.getAllTasks()
+      // webSQL.getAllTasks()
+      webSQL.loadSQLData()
     },
     watch: {
       projectType: function () {
-        this.tlMember = []
-        webSQL.getUsers(this.tlMember, this.projectType)
+        this.updateUsers()
         this.tlVersion = [{versionId: 0, name: '所有'}]
         webSQL.getVersions(this.tlVersion, this.projectType)
+        this.tlRoles = []
+        webSQL.getAllRoles(this.tlRoles, this.projectType)
+        this.memberType = null
+        this.roleType = null
+        this.versionType = null
       },
-      memberType: function () {
-        this.updateTableData()
+      roleType: function () {
+        this.updateUsers()
       },
+      // memberType: function () {
+      //   this.updateTableData()
+      // },
       versionType: function () {
-        this.updateTableData()
+        // this.updateTableData()
       },
       radio: function () {
-        this.updateTableData()
+        // this.updateTableData()
       },
       completeType: function () {
-        this.updateTableData()
+        // this.updateTableData()
       }
     },
     methods: {
+      handleClick: function (row) {
+        this.memberType = row.uid
+        this.updateTableData()
+      },
+      updateUsers: function () {
+        this.tlMember = []
+        if (this.roleType) {
+          webSQL.getUsers(this.tlMember, this.projectType, this.roleType)
+        } else {
+          webSQL.getUsers(this.tlMember, this.projectType)
+        }
+        this.memberType = null
+      },
       updateTaskList: function () {
       },
       updateTableData: function () {
@@ -144,6 +205,7 @@
         var curDate = new Date()
         var monthDate
         console.log(curDate)
+        console.log(this.projectType, this.memberType, this.versionType)
         let callback = function () {
           for (let index in tempData) {
             var cellData = tempData[index]
@@ -180,6 +242,7 @@
               self.tableData.push(cellData)
             }
           }
+          self.showDialog = self.showDialog + 1
         }
         if (this.versionType && this.versionType !== 0) {
           if (this.radio === '1') {

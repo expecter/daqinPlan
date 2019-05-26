@@ -16,18 +16,43 @@ let webconnect = function (queryFormula, params, func) {
     }
   )
 }
-let getAllUsers = function (tlMember) {
+let getAllUsers = function () {
   this.allUser = []
   var self = this
   let searchFunc = function (results, fields) {
     for (let index in results) {
-      tlMember.push(results[index])
+      // tlMember.push(results[index])
       self.allUser.push(results[index])
     }
     let setEvent = new Event('updateProjectMember')
     window.dispatchEvent(setEvent)
   }
   this.webconnect(sqlMap.getUsers, null, searchFunc)
+}
+let loadSQLData = function () {
+  this.getAllUsers()
+  this.getAllTasks()
+  this.getAllSubTasks()
+  this.getAllBugs()
+  // this.getAllRoles()
+  // this.allRoles = []
+  var self = this
+  this.allRoles = []
+  let searchFunc = function (results, fields) {
+    for (let index in results) {
+      self.allRoles.push(results[index])
+    }
+  }
+  this.webconnect(sqlMap.getAllRoles, null, searchFunc)
+  this.tlVersion = []
+  searchFunc = function (results, fields) {
+    for (let index in results) {
+      self.tlVersion.push(results[index])
+    }
+    let setEvent = new Event('updateProjectMember')
+    window.dispatchEvent(setEvent)
+  }
+  this.webconnect(sqlMap.getAllVersions, [], searchFunc)
 }
 let getAllTasks = function () {
   this.allTasks = []
@@ -39,6 +64,44 @@ let getAllTasks = function () {
   }
   this.webconnect(sqlMap.getAllTasks, null, searchFunc)
 }
+let getAllSubTasks = function () {
+  this.allSubTasks = []
+  var self = this
+  let searchFunc = function (results, fields) {
+    for (let index in results) {
+      self.allSubTasks.push(results[index])
+    }
+  }
+  this.webconnect(sqlMap.getAllSubTasks, null, searchFunc)
+}
+let getAllBugs = function () {
+  this.allBugs = []
+  var self = this
+  let searchFunc = function (results, fields) {
+    for (let index in results) {
+      self.allBugs.push(results[index])
+    }
+  }
+  this.webconnect(sqlMap.getAllBugs, null, searchFunc)
+}
+
+let getAllRoles = function (allRoles, projectType) {
+  // this.allRoles = []
+  // var self = this
+  // let searchFunc = function (results, fields) {
+  //   for (let index in results) {
+  //     allRoles.push(results[index])
+  //   }
+  // }
+  // this.webconnect(sqlMap.getRoles, projectType, searchFunc)
+  for (let index in this.allRoles) {
+    var results = this.allRoles[index]
+    if (results.projectId === projectType) {
+      allRoles.push(results)
+    }
+  }
+}
+
 let getTaskById = function (taskId) {
   for (let index in this.allTasks) {
     var user = this.allTasks[index]
@@ -57,17 +120,30 @@ let getUserByUid = function (uid) {
   }
   return null
 }
-let getUsers = function (tlMember, projectType) {
+let getUsers = function (tlMember, projectType, roleType) {
   var self = this
   let searchFunc = function (results, fields) {
     for (let index in results) {
       var user = self.getUserByUid(results[index].uid)
-      tlMember.push(user)
+      var needAdd = true
+      for (let memberIndex in tlMember) {
+        if (tlMember[memberIndex].uid === results[index].uid) {
+          needAdd = false
+          break
+        }
+      }
+      if (needAdd) {
+        tlMember.push(user)
+      }
     }
     let setEvent = new Event('updateProjectMember')
     window.dispatchEvent(setEvent)
   }
-  this.webconnect(sqlMap.getUsersByProjectId, projectType, searchFunc)
+  if (roleType) {
+    this.webconnect(sqlMap.getUsersByProjectIdAndRid, [projectType, roleType], searchFunc)
+  } else {
+    this.webconnect(sqlMap.getUsersByProjectId, projectType, searchFunc)
+  }
 }
 let getProjects = function (tlProject) {
   this.allProject = []
@@ -109,6 +185,30 @@ let getBugsByPidAndUidAndVid = function (tlTask, projectId, Uid, Vid, callback) 
     }
   )
 }
+
+let getBugs = function (tlBugs, projectId, Uid, Vid) {
+  for (let index in this.allBugs) {
+    var results = this.allBugs[index]
+    var condition1 = projectId ? results.projectId === projectId : true
+    var condition2 = Uid ? results.executeUid === Uid : true
+    if (condition1 && condition2) {
+      tlBugs.push(results)
+    }
+  }
+}
+
+let getSubTasks = function (tlTask, projectId, Uid, Vid) {
+  for (let index in this.allSubTasks) {
+    var results = this.allSubTasks[index]
+    results.title = self.getTaskById(results.taskId).title
+    var condition1 = projectId ? results.projectId === projectId : true
+    var condition2 = Uid ? results.executeUid === Uid : true
+    if (condition1 && condition2) {
+      tlTask.push(results)
+    }
+  }
+}
+
 let getTaskByPidAndUid = function (tlTask, projectId, Uid, callback) {
   var self = this
   this.webconnect(sqlMap.getTaskByProjectIdAndUid, [projectId, Uid], function (results, fields) {
@@ -136,14 +236,20 @@ let getTaskByPidAndUidAndVid = function (tlTask, projectId, Uid, Vid, callback) 
   })
 }
 let getVersions = function (tlVersion, projectId) {
-  let searchFunc = function (results, fields) {
-    for (let index in results) {
-      tlVersion.push(results[index])
+  // let searchFunc = function (results, fields) {
+  //   for (let index in results) {
+  //     tlVersion.push(results[index])
+  //   }
+  //   let setEvent = new Event('updateProjectMember')
+  //   window.dispatchEvent(setEvent)
+  // }
+  // this.webconnect(sqlMap.getVersionsByProjectId, projectId, searchFunc)
+  for (let index in this.tlVersion) {
+    var results = this.tlVersion[index]
+    if (results.projectId === projectId) {
+      tlVersion.push(results)
     }
-    let setEvent = new Event('updateProjectMember')
-    window.dispatchEvent(setEvent)
   }
-  this.webconnect(sqlMap.getVersionsByProjectId, projectId, searchFunc)
 }
 export default {
   webconnect,
@@ -157,5 +263,11 @@ export default {
   getTaskByPidAndUid,
   getTaskByPidAndUidAndVid,
   getAllTasks,
-  getTaskById
+  getTaskById,
+  getAllRoles,
+  loadSQLData,
+  getAllBugs,
+  getBugs,
+  getSubTasks,
+  getAllSubTasks
 }
