@@ -95,7 +95,7 @@
             width="380">
           </el-table-column>
           <el-table-column
-            prop="uid"
+            prop="taskNum"
             label="任务数"
             width="380">
           </el-table-column>
@@ -189,10 +189,14 @@
       },
       updateUsers: function () {
         this.tlMember = []
+        var self = this
+        let callback = function () {
+          webSQL.getTaskNumByType(self.tlMember, self.radio, self.projectType, self.versionType)
+        }
         if (this.roleType) {
-          webSQL.getUsers(this.tlMember, this.projectType, this.roleType)
+          webSQL.getUsers(this.tlMember, this.projectType, this.roleType, callback)
         } else {
-          webSQL.getUsers(this.tlMember, this.projectType)
+          webSQL.getUsers(this.tlMember, this.projectType, null, callback)
         }
         this.memberType = null
       },
@@ -246,15 +250,20 @@
         }
         if (this.versionType && this.versionType !== 0) {
           if (this.radio === '1') {
-            webSQL.getTaskByPidAndUidAndVid(tempData, this.projectType, this.memberType, this.versionType, callback)
+            webSQL.getSubTasks(tempData, this.projectType, this.memberType, this.versionType)
+            callback()
           } else {
-            webSQL.getBugsByPidAndUidAndVid(tempData, this.projectType, this.memberType, this.versionType, callback)
+            webSQL.getBugs(tempData, this.projectType, this.memberType, this.versionType)
+            callback()
           }
         } else {
           if (this.radio === '1') {
-            webSQL.getTaskByPidAndUid(tempData, this.projectType, this.memberType, callback)
+            // webSQL.getTaskByPidAndUid(tempData, this.projectType, this.memberType, callback)
+            webSQL.getSubTasks(tempData, this.projectType, this.memberType, this.versionType)
+            callback()
           } else {
-            webSQL.getBugsByPidAndUid(tempData, this.projectType, this.memberType, callback)
+            webSQL.getBugs(tempData, this.projectType, this.memberType, callback)
+            callback()
           }
         }
       }

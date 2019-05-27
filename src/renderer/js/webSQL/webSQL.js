@@ -65,35 +65,37 @@ let getAllTasks = function () {
   this.webconnect(sqlMap.getAllTasks, null, searchFunc)
 }
 let getAllSubTasks = function () {
-  this.allSubTasks = []
+  this.SubTaskDict = {}
+  this.SubTaskPidDict = {}
   var self = this
   let searchFunc = function (results, fields) {
     for (let index in results) {
-      self.allSubTasks.push(results[index])
+      var Uid = results[index].executeUid
+      if (!self.SubTaskDict[Uid]) {
+        self.SubTaskDict[Uid] = []
+      }
+      self.SubTaskDict[Uid].push(results[index])
     }
   }
   this.webconnect(sqlMap.getAllSubTasks, null, searchFunc)
 }
 let getAllBugs = function () {
-  this.allBugs = []
+  this.BugsDict = {}
+  this.BugsPidDict = {}
   var self = this
   let searchFunc = function (results, fields) {
     for (let index in results) {
-      self.allBugs.push(results[index])
+      var Uid = results[index].executeUid
+      if (!self.BugsDict[Uid]) {
+        self.BugsDict[Uid] = []
+      }
+      self.BugsDict[Uid].push(results[index])
     }
   }
   this.webconnect(sqlMap.getAllBugs, null, searchFunc)
 }
 
 let getAllRoles = function (allRoles, projectType) {
-  // this.allRoles = []
-  // var self = this
-  // let searchFunc = function (results, fields) {
-  //   for (let index in results) {
-  //     allRoles.push(results[index])
-  //   }
-  // }
-  // this.webconnect(sqlMap.getRoles, projectType, searchFunc)
   for (let index in this.allRoles) {
     var results = this.allRoles[index]
     if (results.projectId === projectType) {
@@ -120,7 +122,7 @@ let getUserByUid = function (uid) {
   }
   return null
 }
-let getUsers = function (tlMember, projectType, roleType) {
+let getUsers = function (tlMember, projectType, roleType, callback) {
   var self = this
   let searchFunc = function (results, fields) {
     for (let index in results) {
@@ -134,6 +136,9 @@ let getUsers = function (tlMember, projectType, roleType) {
       }
       if (needAdd) {
         tlMember.push(user)
+      }
+      if (callback) {
+        callback()
       }
     }
     let setEvent = new Event('updateProjectMember')
@@ -157,84 +162,63 @@ let getProjects = function (tlProject) {
     window.dispatchEvent(setEvent)
   })
 }
-let getBugsByPidAndUid = function (tlTask, projectId, Uid, callback) {
-  this.webconnect(sqlMap.getbugsByProjectIdAndUid, projectId, function (results, fields) {
-    for (let index in results) {
-      if (results[index].executeUid === Uid) {
-        tlTask.push(results[index])
-      }
-    }
-    callback()
-    let setEvent = new Event('updateProjectMember')
-    window.dispatchEvent(setEvent)
-  })
-}
-let getBugsByPidAndUidAndVid = function (tlTask, projectId, Uid, Vid, callback) {
-  var conn = mysql.createConnection(models.mysql)
-  conn.query(
-    sqlMap.getbugsByVersionId, [Uid, projectId, Vid],
-    function selectCb (err, results, fields) {
-      if (err) {
-        throw err
-      }
-      for (let index in results) {
-        tlTask.push(results[index])
-      }
-      callback()
-      conn.end()
-    }
-  )
-}
 
 let getBugs = function (tlBugs, projectId, Uid, Vid) {
-  for (let index in this.allBugs) {
-    var results = this.allBugs[index]
+  for (let index in this.BugsDict[Uid]) {
+    var results = this.BugsDict[Uid][index]
+    var curTask = this.getTaskById(results.taskId)
     var condition1 = projectId ? results.projectId === projectId : true
     var condition2 = Uid ? results.executeUid === Uid : true
-    if (condition1 && condition2) {
+    var conditon3 = true
+    if (Vid) {
+      conditon3 = false
+      if (curTask.versionId === Vid) {
+        conditon3 = true
+      }
+    }
+    if (condition1 && condition2 && conditon3) {
       tlBugs.push(results)
     }
   }
 }
 
 let getSubTasks = function (tlTask, projectId, Uid, Vid) {
-  for (let index in this.allSubTasks) {
-    var results = this.allSubTasks[index]
-    results.title = self.getTaskById(results.taskId).title
+  for (let index in this.SubTaskDict[Uid]) {
+    var results = this.SubTaskDict[Uid][index]
+    var curTask = this.getTaskById(results.taskId)
+    results.title = this.getTaskById(results.taskId).title
     var condition1 = projectId ? results.projectId === projectId : true
-    var condition2 = Uid ? results.executeUid === Uid : true
-    if (condition1 && condition2) {
+    // var condition2 = Uid ? results.executeUid === Uid : true
+    var conditon3 = true
+    if (Vid) {
+      conditon3 = false
+      if (curTask.versionId === Vid) {
+        conditon3 = true
+      }
+    }
+    if (condition1 && conditon3) {
       tlTask.push(results)
     }
   }
 }
 
-let getTaskByPidAndUid = function (tlTask, projectId, Uid, callback) {
-  var self = this
-  this.webconnect(sqlMap.getTaskByProjectIdAndUid, [projectId, Uid], function (results, fields) {
-    for (let index in results) {
-      var subTask = results[index]
-      subTask.title = self.getTaskById(subTask.taskId).title
-      tlTask.push(subTask)
+let getTaskNumByType = function (tlMember, taskType, projectType, Vid) {
+  console.log(taskType, projectType, Vid)
+  for (let index in tlMember) {
+    var member = tlMember[index]
+    if (taskType === '1') {
+      var subTasks = []
+      this.getSubTasks(subTasks, member.uid, projectType, Vid)
+      tlMember[index]['taskNum'] = subTasks.length
+    } else {
+      var bugs = []
+      this.getBugs(bugs, member.uid, projectType, Vid)
+      tlMember[index]['taskNum'] = bugs.length
     }
-    callback()
-    let setEvent = new Event('updateProjectMember')
-    window.dispatchEvent(setEvent)
-  })
+  }
+  console.log(tlMember)
 }
-let getTaskByPidAndUidAndVid = function (tlTask, projectId, Uid, Vid, callback) {
-  var self = this
-  this.webconnect(sqlMap.getTaskByVersionId, [Uid, projectId, Vid], function (results, fields) {
-    for (let index in results) {
-      var subTask = results[index]
-      subTask.title = self.getTaskById(subTask.taskId).title
-      tlTask.push(subTask)
-    }
-    callback()
-    let setEvent = new Event('updateProjectMember')
-    window.dispatchEvent(setEvent)
-  })
-}
+
 let getVersions = function (tlVersion, projectId) {
   // let searchFunc = function (results, fields) {
   //   for (let index in results) {
@@ -258,10 +242,6 @@ export default {
   getProjects,
   getUserByUid,
   getVersions,
-  getBugsByPidAndUid,
-  getBugsByPidAndUidAndVid,
-  getTaskByPidAndUid,
-  getTaskByPidAndUidAndVid,
   getAllTasks,
   getTaskById,
   getAllRoles,
@@ -269,5 +249,6 @@ export default {
   getAllBugs,
   getBugs,
   getSubTasks,
+  getTaskNumByType,
   getAllSubTasks
 }
