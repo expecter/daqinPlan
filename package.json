@@ -69,7 +69,7 @@
     "vue-cal": "^1.55.2",
     "vue-localstorage": "^0.6.2",
     "vuetify": "^1.5.11",
-    "xlsx": "^0.14.2"
+    "xlsx": "^0.17.0"
   },
   "devDependencies": {
     "ajv": "^6.5.0",
